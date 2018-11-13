@@ -1,0 +1,24 @@
+For D[R][C] and data type of size L, array size is L*R*C
+
+In this case, L = 4.
+
+Explanation of assembly code (in comments):
+// get v1=q->t at offset of 8, and because char has size 1,
+//we know the size of array[] is B = 5, 6, 7, or 8 due to alignment.
+movslq    8(%rsi), %rax
+
+// v1 + v2
+// because short has size 2,
+// we know the size of s[] is A = 7, 8, 9, or 10 due to alignment.
+// 4+8+6*2= 24, which is a multiple of 8, so we stop at 7 because
+// 4+8+7*2=26 which isn't a multiple of 8.
+addq      32(%rsi), %rax
+
+// put v1 + v2 in p->y
+// A*B = 45 or 46 because of alignment; 45*4 = 180, 46*4=184.
+// 44*4=176 which is a multiple of 8 so we stop at 45.
+movq      %rax, 184(%rdi)
+ret
+
+A=9 and B=5 because that's the only combination of possible A and B values that works
+for A*B=45 or 46 (45 is the right one).
