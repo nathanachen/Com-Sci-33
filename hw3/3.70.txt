@@ -1,0 +1,16 @@
+A)
+e1.p offset is 0
+e1.y offset is 8
+e2.x offset is 0
+e2.next offset is 8
+
+B)
+16 bytes because both e1 and e2 require 16 bytes each but it's a union type so we only need 16 bytes total.
+
+C) up->e2.x = *(up->e2.next->e1.p) - (up->e2.next->e1.y)
+
+movq 8(%rdi),%rax //  get next.
+movq (%rax), %rdx //  make next point to a different union
+movq	(%rdx), %rdx // make %rdx hold an address
+subq 8(%rax), %rdx // subtract up->e2.next->e1.y
+movq %rdx, (%rdi) //  move value to up->e2.x
