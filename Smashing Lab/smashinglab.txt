@@ -1,0 +1,403 @@
+Unzipped the sthttpd-2.27.0.tar.gz file using:
+tar xvzf "/w/home.19/ee/ugrad/chenn/sthttpd-2.27.0.tar.gz"
+
+1) I changed my path to be /usr/local/cs/bin by using the following command:
+PATH=/usr/local/cs/bin:$PATH ; export PATH
+
+Then, I entered which gcc, which returned /usr/local/cs/bin/gcc as expected.
+
+2) Manually changed the three lines of code in src/thttpd.c and src/libhttpd.c
+Used ./configure \
+LDFLAGS="-Xlinker --rpath=/usr/local/cs/gcc-$(gcc -dumpversion)/lib"
+to configure the make script.
+
+Copy-pasted the following code from discussion slides into a new file 
+in the sthttpd-2.27.0 directory called compile.sh to 
+run all of the compiling commands:
+#!/bin/sh
+./configure \
+CFLAGS='-m32’ \
+LDFLAGS="-Xlinker --rpath=/usr/local/cs/gcc-$(gcc
+-dumpversion)/lib"
+make clean
+make CFLAGS='-g3 -O2 -fno-inline -fstack-protector-strong'
+mv src/thttpd src/thttpd-sp
+make clean
+make CFLAGS='-g3 -O2 -fno-inline -static-libasan -fsanitize=address'
+mv src/thttpd src/thttpd-as
+make clean
+make CFLAGS='-g3 -O2 -fno-inline -fno-stack-protector -zexecstack'
+mv src/thttpd src/thttpd-no
+
+Used the following to change permissions of the file compile.sh to make it executable:
+chmod +777 compile.sh
+
+Executed the code with ./compile.sh in the sthttpd-2.27.0 folder instead of outside;
+I tried doing this outside of that directory and it did not work because I could not
+call make clean properly without a makefile in that directory.
+
+3 and 4) Correct port numbers according to (12330 + 3 * (X % 293) + Y):
+12814 for SP
+12815 for AS
+12816 for NO
+
+Using emacs, we create a new file foo.txt:
+emacs src/foo.txt
+
+foo.txt contains the following text:
+This is a test.
+
+Entering either of the following three lines in the kernel results in nothing
+perceivable happening on the surface, but the server "takes over" the kernel in
+background:
+src/thttpd-sp -p 12814 -D
+src/thttpd-as -p 12815 -D
+src/thttpd-no -p 12816 -D
+
+We open a up a new terminal window after our calls to the servers have taken over the
+kernel, and test it out using the following curl commands:
+curl http://localhost:12814/foo.txt
+curl http://localhost:12815/foo.txt
+curl http://localhost:12816/foo.txt
+
+The correct text appears: "This is a test." for all three calls.
+
+6[sp])
+Create a text file called hack.txt that contains more than the 100 characters we
+allowed with the patch.
+
+My hack.txt file contains the following phrase repeated over and over:
+port=I'mhackingsohardrightnowI'mhackingsohardrightnow ..... etc.
+
+run it in gdb:
+gdb src/thttpd-sp
+(gdb) run -p 12814 -D -C hack.txt
+
+This outputs:
+(gdb) r -p 12814 -D -C hack.txt
+Starting program: /w/home.19/ee/ugrad/chenn/sthttpd-2.27.0/src/thttpd-sp -p 12814 -D -C hack.txt
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+*** stack smashing detected ***: /w/home.19/ee/ugrad/chenn/sthttpd-2.27.0/src/thttpd-sp terminated
+Program received signal SIGSEGV, Segmentation fault.
+0x00007ffff6da50b8 in ?? () from /lib64/libgcc_s.so.1
+
+So we use (gdb) bt to backtrace the problem and get this output of code:
+#0  0x00007ffff6da50b8 in ?? () from /lib64/libgcc_s.so.1
+#1  0x00007ffff6da5fb9 in _Unwind_Backtrace () from /lib64/libgcc_s.so.1
+#2  0x00007ffff76e3ba6 in backtrace () from /lib64/libc.so.6
+#3  0x00007ffff7647ce4 in __libc_message () from /lib64/libc.so.6
+#4  0x00007ffff76e7677 in __fortify_fail () from /lib64/libc.so.6
+#5  0x00007ffff76e7632 in __stack_chk_fail () from /lib64/libc.so.6
+#6  0x0000000000404165 in read_config (filename=<optimized out>) at thttpd.c:1129
+#7  0x73676e696b636168 in ?? ()
+#8  0x676972647261686f in ?? ()
+#9  0x6d2749776f6e7468 in ?? ()
+#10 0x73676e696b636168 in ?? ()
+#11 0x676972647261686f in ?? ()
+#12 0x6d2749776f6e7468 in ?? ()
+#13 0x73676e696b636168 in ?? ()
+#14 0x676972647261686f in ?? ()
+#15 0x6d2749776f6e7468 in ?? ()
+#16 0x73676e696b636168 in ?? ()
+#17 0x676972647261686f in ?? ()
+#18 0x6d2749776f6e7468 in ?? ()
+#19 0x73676e696b636168 in ?? ()
+#20 0x676972647261686f in ?? ()
+#21 0x6d2749776f6e7468 in ?? ()
+#22 0x73676e696b636168 in ?? ()
+#23 0x676972647261686f in ?? ()
+#24 0x6d2749776f6e7468 in ?? ()
+#25 0x73676e696b636168 in ?? ()
+#26 0x676972647261686f in ?? ()
+#27 0x6d2749776f6e7468 in ?? ()
+#28 0x73676e696b636168 in ?? ()
+#29 0x676972647261686f in ?? ()
+#30 0x6d2749776f6e7468 in ?? ()
+#31 0x73676e696b636168 in ?? ()
+#32 0x676972647261686f in ?? ()
+#33 0x6d2749776f6e7468 in ?? ()
+#34 0x73676e696b636168 in ?? ()
+#35 0x676972647261686f in ?? ()
+#36 0x6d2749776f6e7468 in ?? ()
+#37 0x73676e696b636168 in ?? ()
+#38 0x676972647261686f in ?? ()
+#39 0x6d2749776f6e7468 in ?? ()
+#40 0x73676e696b636168 in ?? ()
+#41 0x676972647261686f in ?? ()
+#42 0x6d2749776f6e7468 in ?? ()
+#43 0x73676e696b636168 in ?? ()
+#44 0x676972647261686f in ?? ()
+#45 0x6d2749776f6e7468 in ?? ()
+#46 0x73676e696b636168 in ?? ()
+#47 0x676972647261686f in ?? ()
+#48 0x6d2749776f6e7468 in ?? ()
+#49 0x73676e696b636168 in ?? ()
+#50 0x676972647261686f in ?? ()
+#51 0x6d2749776f6e7468 in ?? ()
+#52 0x73676e696b636168 in ?? ()
+#53 0x676972647261686f in ?? ()
+#54 0x6d2749776f6e7468 in ?? ()
+#55 0x73676e696b636168 in ?? ()
+#56 0x676972647261686f in ?? ()
+#57 0x6d2749776f6e7468 in ?? ()
+
+We then set a breakpoint and step into the code until we reach the error:
+(gdb) b read_config
+(gdb) set disassemble-next-line on
+(gdb) s
+(gdb) s
+(gdb) s
+.....leads to:
+
+1189        (void) fclose( fp );
+=> 0x0000000000404045 <read_config+1141>:       4c 89 f7        mov    %r14,%rdi
+   0x0000000000404048 <read_config+1144>:       e8 33 e3 ff ff  callq  0x402380 <fclose@pl        t>
+   0x000000000040404d <read_config+1149>:       48 8b 44 24 68  mov    0x68(%rsp),%rax
+   0x0000000000404052 <read_config+1154>:       64 48 33 04 25 28 00 00 00      xor    %fs        :0x28,%rax
+   0x000000000040405b <read_config+1163>:       0f 85 ff 00 00 00       jne    0x404160 <r        ead_config+1424>
+   0x0000000000404061 <read_config+1169>:       48 83 c4 70     add    $0x70,%rsp
+   0x0000000000404065 <read_config+1173>:       5b      pop    %rbx
+   0x0000000000404066 <read_config+1174>:       5d      pop    %rbp
+   0x0000000000404067 <read_config+1175>:       41 5c   pop    %r12
+   0x0000000000404069 <read_config+1177>:       41 5d   pop    %r13
+   0x000000000040406b <read_config+1179>:       41 5e   pop    %r14
+   0x000000000040406d <read_config+1181>:       c3      retq
+(gdb) s
+*** stack smashing detected ***: /w/home.19/ee/ugrad/chenn/sthttpd-2.27.0/src/thttpd-sp te        rminated
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00007ffff6da50b8 in ?? () from /lib64/libgcc_s.so.1
+=> 0x00007ffff6da50b8:  80 39 48        cmpb   $0x48,(%rcx)
+
+The program terminates because our canary value watches buffer overflow and ends the 
+program if we get an unexpected value like the one we had in hack.txt:
+  0x0000000000404052 <read_config+1154>:       64 48 33 04 25 28 00 00 00      xor    %fs:0x28,%rax
+
+7[as])
+Run it in gdb:
+gdb src/thttpd-as
+(gdb) r -p 12815 -D -C hack.txt
+
+And we get the following output:
+Starting program: /w/home.19/ee/ugrad/chenn/sthttpd-2.27.0/src/thttpd-as -p 12815 -D -C hack.txt
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+=================================================================
+==11312==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7fffffffcce4 at pc 0x00000048a72c bp 0x7fffffffcc40 sp 0x7fffffffc3f0
+READ of size 654 at 0x7fffffffcce4 thread T0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00007ffff70730b8 in ?? () from /lib64/libgcc_s.so.1
+
+So we use the backtrace:
+(gdb) bt
+
+which gives us this output:
+#0  0x00007ffff70730b8 in ?? () from /lib64/libgcc_s.so.1
+#1  0x00007ffff7073fb9 in _Unwind_Backtrace () from /lib64/libgcc_s.so.1
+#2  0x00000000004de8d3 in __sanitizer::BufferedStackTrace::SlowUnwindStack (this=0x7fffffffaee0,
+    pc=4761388, max_depth=<optimized out>)
+    at ../../../../gcc-8.2.0/libsanitizer/sanitizer_common/sanitizer_unwind_linux_libcdep.cc:124
+#3  0x0000000000416ba7 in __asan::GetStackTraceWithPcBpAndContext (fast=false, context=0x0,
+    bp=140737488342080, pc=4761388, max_depth=256, stack=0x7fffffffaee0)
+    at ../../../../gcc-8.2.0/libsanitizer/asan/asan_stack.h:46
+#4  __asan::ErrorGeneric::Print (
+    this=this@entry=0x991748 <__asan::ScopedInErrorReport::current_error_+8>)
+    at ../../../../gcc-8.2.0/libsanitizer/asan/asan_errors.cc:446
+#5  0x00000000004d95e4 in __asan::ErrorDescription::Print (
+    this=0x991740 <__asan::ScopedInErrorReport::current_error_>)
+    at ../../../../gcc-8.2.0/libsanitizer/asan/asan_errors.h:338
+#6  __asan::ScopedInErrorReport::~ScopedInErrorReport (this=0x7fffffffb766,
+    __in_chrg=<optimized out>) at ../../../../gcc-8.2.0/libsanitizer/asan/asan_report.cc:136
+#7  __asan::ReportGenericError (pc=4761388, bp=bp@entry=140737488342080,
+    sp=sp@entry=140737488339952, addr=addr@entry=140737488342244, is_write=is_write@entry=false,
+    access_size=access_size@entry=654, exp=0, fatal=false)
+    at ../../../../gcc-8.2.0/libsanitizer/asan/asan_report.cc:397
+#8  0x000000000048a74b in __interceptor_strchr (s=<optimized out>, c=<optimized out>)
+    at ../../../../gcc-8.2.0/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:618
+#9  0x000000000050b6de in read_config (filename=<optimized out>) at thttpd.c:1018
+#10 0x6d2749776f6e7468 in ?? ()
+#11 0x73676e696b636168 in ?? ()
+#12 0x676972647261686f in ?? ()
+#13 0x6d2749776f6e7468 in ?? ()
+#14 0x73676e696b636168 in ?? ()
+#15 0x676972647261686f in ?? ()
+#16 0x6d2749776f6e7468 in ?? ()
+#17 0x73676e696b636168 in ?? ()
+#18 0x676972647261686f in ?? ()
+#19 0x6d2749776f6e7468 in ?? ()
+#20 0x73676e696b636168 in ?? ()
+#21 0x676972647261686f in ?? ()
+#22 0x6d2749776f6e7468 in ?? ()
+#23 0x73676e696b636168 in ?? ()
+#24 0x676972647261686f in ?? ()
+#25 0x6d2749776f6e7468 in ?? ()
+#26 0x73676e696b636168 in ?? ()
+#27 0x676972647261686f in ?? ()
+#28 0x6d2749776f6e7468 in ?? ()
+#29 0x73676e696b636168 in ?? ()
+#30 0x676972647261686f in ?? ()
+#31 0x6d2749776f6e7468 in ?? ()
+#32 0x73676e696b636168 in ?? ()
+#33 0x676972647261686f in ?? ()
+#34 0x6d2749776f6e7468 in ?? ()
+#35 0x73676e696b636168 in ?? ()
+#36 0x676972647261686f in ?? ()
+#37 0x6d2749776f6e7468 in ?? ()
+#38 0x73676e696b636168 in ?? ()
+#39 0x676972647261686f in ?? ()
+#40 0x6d2749776f6e7468 in ?? ()
+#41 0x73676e696b636168 in ?? ()
+#42 0x676972647261686f in ?? ()
+#43 0x6d2749776f6e7468 in ?? ()
+#44 0x73676e696b636168 in ?? ()
+
+And we know that the issue is with read_config, which was affected by our patch.
+We set a breakpoint at read_config:
+(gdb) b read_config
+(gdb) set-disassemble-next-line on
+
+And run again, where we find eventually that the shadow memory is checked, and is th 
+root of the error. The test fails, so the we get an error message.
+
+5[no])
+Run it in gdb:
+gdb src/thttpd-no
+(gdb) r -p 12816 -D -C hack.txt
+
+And we get the following error message:
+Starting program: /w/home.19/ee/ugrad/chenn/sthttpd-2.27.0/src/thttpd-no -p 12816 -D -C hack.txt
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000403f79 in read_config (filename=<optimized out>) at thttpd.c:1189
+1189        (void) fclose( fp );
+
+We get the following backtrace:
+#0  0x0000000000403f79 in read_config (filename=<optimized out>) at thttpd.c:1189
+#1  0x73676e696b636168 in ?? ()
+#2  0x676972647261686f in ?? ()
+#3  0x6d2749776f6e7468 in ?? ()
+#4  0x73676e696b636168 in ?? ()
+#5  0x676972647261686f in ?? ()
+#6  0x6d2749776f6e7468 in ?? ()
+#7  0x73676e696b636168 in ?? ()
+#8  0x676972647261686f in ?? ()
+#9  0x6d2749776f6e7468 in ?? ()
+#10 0x73676e696b636168 in ?? ()
+#11 0x676972647261686f in ?? ()
+#12 0x6d2749776f6e7468 in ?? ()
+#13 0x73676e696b636168 in ?? ()
+#14 0x676972647261686f in ?? ()
+#15 0x6d2749776f6e7468 in ?? ()
+#16 0x73676e696b636168 in ?? ()
+#17 0x676972647261686f in ?? ()
+#18 0x6d2749776f6e7468 in ?? ()
+#19 0x73676e696b636168 in ?? ()
+#20 0x676972647261686f in ?? ()
+#21 0x6d2749776f6e7468 in ?? ()
+#22 0x73676e696b636168 in ?? ()
+#23 0x676972647261686f in ?? ()
+#24 0x6d2749776f6e7468 in ?? ()
+#25 0x73676e696b636168 in ?? ()
+#26 0x676972647261686f in ?? ()
+#27 0x6d2749776f6e7468 in ?? ()
+#28 0x73676e696b636168 in ?? ()
+#29 0x676972647261686f in ?? ()
+#30 0x6d2749776f6e7468 in ?? ()
+#31 0x73676e696b636168 in ?? ()
+#32 0x676972647261686f in ?? ()
+#33 0x6d2749776f6e7468 in ?? ()
+#34 0x73676e696b636168 in ?? ()
+#35 0x676972647261686f in ?? ()
+#36 0x6d2749776f6e7468 in ?? ()
+#37 0x73676e696b636168 in ?? ()
+#38 0x676972647261686f in ?? ()
+#39 0x6d2749776f6e7468 in ?? ()
+#40 0x73676e696b636168 in ?? ()
+#41 0x676972647261686f in ?? ()
+#42 0x6d2749776f6e7468 in ?? ()
+#43 0x73676e696b636168 in ?? ()
+#44 0x676972647261686f in ?? ()
+#45 0x6d2749776f6e7468 in ?? ()
+#46 0x73676e696b636168 in ?? ()
+#47 0x676972647261686f in ?? ()
+#48 0x6d2749776f6e7468 in ?? ()
+#49 0x73676e696b636168 in ?? ()
+#50 0x676972647261686f in ?? ()
+#51 0x6d2749776f6e7468 in ?? ()
+#52 0x73676e696b636168 in ?? ()
+#53 0x676972647261686f in ?? ()
+#54 0x6d2749776f6e7468 in ?? ()
+#55 0x73676e696b636168 in ?? ()
+#56 0x676972647261686f in ?? ()
+#57 0x6d2749776f6e7468 in ?? ()
+
+Set the breakpoint before line 1189 of thttpd.c like the error message points out:
+(gdb) b 1188
+(gdb) set disassemble-next-line on
+
+After stepping through with (gdb) s, we get:
+1189        (void) fclose( fp );
+=> 0x0000000000403f65 <read_config+1125>:       4c 89 f7        mov    %r14,%rdi
+   0x0000000000403f68 <read_config+1128>:       e8 b3 e3 ff ff  callq  0x402320 <fclose@plt>
+   0x0000000000403f6d <read_config+1133>:       48 83 c4 70     add    $0x70,%rsp
+   0x0000000000403f71 <read_config+1137>:       5b      pop    %rbx
+   0x0000000000403f72 <read_config+1138>:       5d      pop    %rbp
+   0x0000000000403f73 <read_config+1139>:       41 5c   pop    %r12
+   0x0000000000403f75 <read_config+1141>:       41 5d   pop    %r13
+   0x0000000000403f77 <read_config+1143>:       41 5e   pop    %r14
+   0x0000000000403f79 <read_config+1145>:       c3      retq
+(gdb) s
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000403f79 in read_config (filename=<optimized out>) at thttpd.c:1189
+1189        (void) fclose( fp );
+   0x0000000000403f65 <read_config+1125>:       4c 89 f7        mov    %r14,%rdi
+   0x0000000000403f68 <read_config+1128>:       e8 b3 e3 ff ff  callq  0x402320 <fclose@plt>
+   0x0000000000403f6d <read_config+1133>:       48 83 c4 70     add    $0x70,%rsp
+   0x0000000000403f71 <read_config+1137>:       5b      pop    %rbx
+   0x0000000000403f72 <read_config+1138>:       5d      pop    %rbp
+   0x0000000000403f73 <read_config+1139>:       41 5c   pop    %r12
+   0x0000000000403f75 <read_config+1141>:       41 5d   pop    %r13
+   0x0000000000403f77 <read_config+1143>:       41 5e   pop    %r14
+=> 0x0000000000403f79 <read_config+1145>:       c3      retq
+
+The return address is not valid even though the code is executed and not terminated
+like before. This invalid address is the reason behind the Segmentation fault error
+message, when we have the return command:
+0x0000000000403f79 <read_config+1145>:       c3      retq
+
+8) I create the assembly code files by writing a script named compile2.sh:
+#!/bin/sh
+./configure \
+LDFLAGS="-Xlinker --rpath=/usr/local/cs/gcc-$(gcc -dumpversion)/lib"
+
+make clean
+gcc -S -O2 -fno-inline -fstack-protector-strong -I .. -I . thttpd.c -o thttpd-sp.s
+
+make clean
+gcc -S -O2 -fno-inline -static-libasan -fsanitize=address -I .. -I . thttpd.c -o thttpd-as.s
+
+make clean
+gcc -S -O2 -fno-inline -fno-stack-protector -zexecstack -I .. -I . thttpd.c -o thttpd-no.s
+
+At first, I tried to compile it with src/thttpd.c and my compile2.sh file outside of 
+the src folder, which resulted in the compile2.sh file not being able to be in the
+same directory as some of the files it needed to access such as fdwatch.h (inside
+the src folder). Once I moved compile2.sh to the src folder and got rid of the
+src/ prefix before thttpd.c it worked perfectly.
+
+I allow it to be executable using chmod +777 compile2.sh and then execute it with
+the following:
+./compile2.sh
+
+thttpd-as.s has many more lines of code than thttpd-sp.s and thttpd-no.s because
+compiling it this way makes it deal with memory access and check whenever there is
+data out of bounds, for instance.
+
+thttpd-sp.s checks the canary value in the code instead of terminating the program
+and not checking the canary value like thttpd-no.s behaves, but otherwise the 
+compilation results are similar and the number of lines of code for both are similar.
