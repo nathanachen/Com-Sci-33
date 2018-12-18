@@ -1,0 +1,77 @@
+Enter the openmp lab files directory:
+cd openmplab
+
+Check the original overall runtime by using:
+$ make seq
+$ ./seq
+
+which results in the following output in the terminal:
+FUNC TIME : 0.741914
+TOTAL TIME : 2.541817
+
+Find which function we should improve the most:
+make seq GPROF=1
+./seq
+gprof seq | less
+
+which results in the following output in the terminal:
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total
+ time   seconds   seconds    calls  ms/call  ms/call  name
+ 75.74      0.59     0.59       15    39.39    40.40  func1
+ 10.27      0.67     0.08  5177344     0.00     0.00  rand2
+  3.85      0.70     0.03   491520     0.00     0.00  findIndexBin
+  2.57      0.72     0.02                             sequence
+  1.28      0.73     0.01       15     0.67     0.67  func2
+  1.28      0.74     0.01       15     0.67     0.67  func4
+  1.28      0.75     0.01        2     5.01     5.01  init
+  1.28      0.76     0.01        1    10.01    74.91  addSeed
+  1.28      0.77     0.01        1    10.01    10.01  imdilateDisk
+  1.28      0.78     0.01                             filter
+  0.00      0.78     0.00   983042     0.00     0.00  round
+  0.00      0.78     0.00       16     0.00     0.00  dilateMatrix
+  0.00      0.78     0.00       15     0.00     0.00  func3
+  0.00      0.78     0.00       15     0.00     2.00  func5
+  0.00      0.78     0.00       15     0.00     0.00  rand1
+  0.00      0.78     0.00        2     0.00     0.00  get_time
+  0.00      0.78     0.00        1     0.00     0.00  elapsed_time
+  0.00      0.78     0.00        1     0.00     0.00  fillMatrix
+  0.00      0.78     0.00        1     0.00     0.00  func0
+  0.00      0.78     0.00        1     0.00     0.00  getNeighbors
+
+The largest amount of time is taken up by func1, then func2, then func4, then func3, then func5 so that will be the focus in that order.
+
+In the func.c file, set the number of threads to be 28 and use the following:
+#pragma omp parallel for num_threads(28)
+
+so that we have multiple threads running to speed up the functions.
+
+Check that all of these potential time reductions worked together to reduce the time
+enough by using the following commands in the terminal, and that the output is the same:
+$ make check
+
+outputs:
+FUNC TIME : 0.072546
+TOTAL TIME : 1.910988
+diff --brief correct.txt output.txt
+
+which is a faster time and outputs no errors.
+
+In order to speed up the functions even more, we can consolidate repeated calculations of
+variable values into single variables/lines of code, if we already know the result ahead of time.
+In func0, bring the weights[i] calculation outside of the for loop and then replace it with variable
+"replacement." Repeat for the rest of the functions.
+
+Check that all of these potential time reductions worked together to reduce the time
+enough by using the following commands in the terminal, and that the output is the same:
+$ make check
+
+outputs:
+FUNC TIME : 0.052595
+TOTAL TIME : 1.888576
+diff --brief correct.txt output.txt
+
+This is an even faster time than before.
+
+The speedup is (original FUNC TIME) / (improved FUNC TIME), and this expression is equal to:
+0.741914 / 0.052595 = 14.106
