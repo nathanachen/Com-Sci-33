@@ -13,7 +13,7 @@ to configure the make script.
 
 Copy-pasted the following code from discussion slides into a new file 
 in the sthttpd-2.27.0 directory called compile.sh to 
-run all of the compiling commands:
+compile thttpd differently three times and run the executable each time:
 #!/bin/sh
 ./configure \
 CFLAGS='-m32’ \
@@ -258,8 +258,7 @@ We set a breakpoint at read_config:
 (gdb) b read_config
 (gdb) set-disassemble-next-line on
 
-And run again, where we find eventually that the shadow memory is checked, and is th 
-root of the error. The test fails, so the we get an error message.
+And run again, the test fails, so the we get an error message.
 
 5[no])
 Run it in gdb:
